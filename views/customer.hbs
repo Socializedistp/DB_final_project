@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        input, select, button {
+            padding: 10px;
+            margin: 5px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+    <h1>{{title}}</h1>
+
+    <!-- Search Form -->
+    <form id="searchForm">
+        <label for="searchType">Search by:</label>
+        <select id="searchType" name="searchType">
+            <option value="book">Book Name</option>
+            <option value="author">Author Name</option>
+            <option value="award">Award Name</option>
+        </select>
+        <br>
+        <label for="searchQuery">Search Query:</label>
+        <input type="text" id="searchQuery" name="searchQuery" required>
+        <br>
+        <button type="submit">Search</button>
+    </form>
+
+    <!-- Search Results -->
+    <table id="resultsTable" style="display:none;">
+        <thead>
+            <tr>
+                <th>ISBN</th>
+                <th>Title</th>
+                <th>Year</th>
+                <th>Price</th>
+                <th>Category</th>
+            </tr>
+        </thead>
+        <tbody id="resultsBody">
+        </tbody>
+    </table>
+
+    <!-- Reservations -->
+    <h2>Your Reservations</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Reservation Date</th>
+                <th>Pickup Time</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each reservations}}
+            <tr>
+                <td>{{this.id}}</td>
+                <td>{{this.reservation_date}}</td>
+                <td>{{this.pickup_time}}</td>
+            </tr>
+            {{/each}}
+        </tbody>
+    </table>
+
+    <!-- Shopping Basket Section -->
+    <h2>Your Shopping Cart</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Basket ID</th>
+                <th>Order Date</th>
+                <th>Book ISBN</th>
+                <th>Quantity</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#if shoppingBasket.length}}
+                {{#each shoppingBasket}}
+                <tr>
+                    <td>{{this.basketid}}</td>
+                    <td>{{this.order_date}}</td>
+                    <td>{{this.book_isbn}}</td>
+                    <td>{{this.number}}</td>
+                </tr>
+                {{/each}}
+            {{else}}
+                <tr>
+                    <td colspan="4">Your shopping cart is empty.</td>
+                </tr>
+            {{/if}}
+        </tbody>
+    </table>
+    
+
+    <!-- Add to Shopping Basket -->
+    <h2>Add to Shopping Basket</h2>
+    <form id="addToBasketForm">
+        <input type="hidden" name="basketId" value="1"> <!-- Replace with dynamic basket ID -->
+        <label for="bookIsbn">Book ISBN:</label>
+        <input type="text" id="bookIsbn" name="bookIsbn" placeholder="Enter Book ISBN" required>
+        <br>
+        <label for="quantity">Quantity:</label>
+        <input type="number" id="quantity" name="quantity" placeholder="Enter Quantity" required>
+        <br>
+        <button type="submit">Add to Basket</button>
+    </form>
+
+    <!-- Purchase Button -->
+    <h2>Purchase Items</h2>
+    <button id="purchaseButton" data-basket-id="1">Purchase</button>
+
+    <script>
+        // Search Functionality
+        document.getElementById('searchForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const searchType = document.getElementById('searchType').value;
+            const searchQuery = document.getElementById('searchQuery').value;
+
+            try {
+                const response = await fetch('/customer/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ searchType, searchQuery })
+                });
+
+                const results = await response.json();
+
+                if (response.ok) {
+                    const resultsTable = document.getElementById('resultsTable');
+                    const resultsBody = document.getElementById('resultsBody');
+
+                    resultsBody.innerHTML = ''; // Clear previous results
+
+                    results.forEach(book => {
+                        const row = `
+                            <tr>
+                                <td>${book.isbn}</td>
+                                <td>${book.title}</td>
+                                <td>${book.year}</td>
+                                <td>${book.price}</td>
+                                <td>${book.category}</td>
+                            </tr>
+                        `;
+                        resultsBody.innerHTML += row;
+                    });
+
+                    resultsTable.style.display = 'table';
+                } else {
+                    alert('Error: ' + results.error);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('An error occurred while fetching search results.');
+            }
+        });
+
+        // Add to Basket Functionality
+        document.getElementById('addToBasketForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch('/customer/add-to-basket', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+
+                const result = await response.json();
+                alert(result.message || result.error);
+
+                // Reload the shopping basket
+                if (response.ok) {
+                    const basketResponse = await fetch('/customer/shopping-basket', { method: 'GET' });
+                    const basketData = await basketResponse.json();
+                    updateShoppingBasket(basketData); // Function to update the table
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Failed to add to basket.');
+            }
+        });
+
+        function updateShoppingBasket(data) {
+            const basketTable = document.querySelector('#shoppingBasket tbody');
+            basketTable.innerHTML = ''; // Clear current rows
+            data.forEach(item => {
+                const row = `
+                    <tr>
+                        <td>${item.basketid}</td>
+                        <td>${item.order_date || 'Not Purchased'}</td>
+                        <td>${item.book_isbn}</td>
+                        <td>${item.number}</td>
+                    </tr>
+                `;
+                basketTable.innerHTML += row;
+            });
+        }
+
+
+        // Purchase Functionality
+        document.getElementById('purchaseButton').addEventListener('click', async function () {
+            const basketId = this.getAttribute('data-basket-id');
+
+            try {
+                const response = await fetch('/customer/purchase', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ basketId }),
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert(result.message);
+                } else {
+                    alert(result.error || 'Failed to complete purchase.');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Failed to complete purchase.');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<h1>{{title}}</h1>
+
+<h2>Add Data</h2>
+<form id="addDataForm">
+    <label for="table">Table:</label>
+    <select id="table" name="table">
+        <option value="Book">Book</option>
+        <option value="Author">Author</option>
+        <option value="Award">Award</option>
+        <option value="Warehouse">Warehouse</option>
+        <option value="Inventory">Inventory</option>
+        <option value="Contains">Contains</option>
+    </select>
+    <br>
+    <textarea id="data" name="data" placeholder="Enter data as JSON" required></textarea>
+    <br>
+    <button type="submit">Add</button>
+</form>
+
+<h2>Update Data</h2>
+<form id="updateDataForm">
+    <label for="table">Table:</label>
+    <select id="table" name="table">
+        <option value="Book">Book</option>
+        <option value="Author">Author</option>
+        <option value="Award">Award</option>
+        <option value="Warehouse">Warehouse</option>
+        <option value="Inventory">Inventory</option>
+        <option value="Contains">Contains</option>
+    </select>
+    <br>
+    <input type="text" id="id" name="id" placeholder="Enter ID to update" required>
+    <br>
+    <textarea id="data" name="data" placeholder="Enter updated data as JSON" required></textarea>
+    <br>
+    <button type="submit">Update</button>
+</form>
+
+<h2>Delete Data</h2>
+<form id="deleteDataForm">
+    <label for="table">Table:</label>
+    <select id="table" name="table">
+        <option value="Book">Book</option>
+        <option value="Author">Author</option>
+        <option value="Award">Award</option>
+        <option value="Warehouse">Warehouse</option>
+        <option value="Inventory">Inventory</option>
+        <option value="Contains">Contains</option>
+    </select>
+    <br>
+    <input type="text" id="id" name="id" placeholder="Enter ID to delete" required>
+    <br>
+    <button type="submit">Delete</button>
+</form>
+
+<script>
+    // Handle Add Data
+    document.getElementById('addDataForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+        data.data = JSON.parse(data.data);
+
+        const response = await fetch('/admin/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        const result = await response.json();
+        alert(result.message || result.error);
+    });
+
+    // Handle Update Data
+    document.getElementById('updateDataForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+        data.data = JSON.parse(data.data);
+
+        const response = await fetch('/admin/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        const result = await response.json();
+        alert(result.message || result.error);
+    });
+
+    // Handle Delete Data
+    document.getElementById('deleteDataForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+
+        const response = await fetch('/admin/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        const result = await response.json();
+        alert(result.message || result.error);
+    });
+</script>
